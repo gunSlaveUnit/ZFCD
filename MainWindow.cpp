@@ -199,6 +199,7 @@ uint_fast32_t file_size(const char *name) {
     /*
      * Возвращает размер указанного файла в байтах
      * */
+
     std::ifstream f(name, std::ios::ate);
     if (!f.is_open())
         throw std::runtime_error("Can't open file\n");
@@ -269,7 +270,8 @@ void MainWindow::encode(FILE *input, const std::string &filename) {
     sourceFileSizeValue->setText(humanFileSize(source_file_size, true, 2));
 
     std::filesystem::path path(filename);
-    auto outFilename = (std::stringstream() << path.stem().string() << ".ahf").str().c_str();
+    auto p = (std::stringstream() << path.parent_path().string() << "\\" << path.stem().string() << ".ahf").str();
+    auto outFilename = p.c_str();
 
     BIT_FILE *output = open_output_bit_file(outFilename);
     if (output == nullptr)
@@ -295,7 +297,7 @@ void MainWindow::encode(FILE *input, const std::string &filename) {
 
     close_output_bit_file(output);
 
-    auto created_file_size = file_size(outFilename);
+    auto created_file_size = file_size(p.c_str());
     receivedFileSizeValue->setText(humanFileSize(created_file_size, true, 2));
     auto ratio = ceil(created_file_size * 100.0 / source_file_size);
     compressionRatioTextValue->setText(QString::number(ratio) + " %");
@@ -318,7 +320,8 @@ void MainWindow::decode(BIT_FILE *input, const std::string &filename) {
         ext += ch;
     }
 
-    auto outFilename = (std::stringstream() << path.stem().string() << "." << ext).str().c_str();
+    auto p = (std::stringstream() << path.parent_path().string() << "\\" << path.stem().string() << "." << ext).str();
+    auto outFilename = p.c_str();
 
     FILE *output = fopen(outFilename, "wb");
     if (output == nullptr)
@@ -340,7 +343,7 @@ void MainWindow::decode(BIT_FILE *input, const std::string &filename) {
     fflush(output);
     fclose(output);
 
-    auto created_file_size = file_size(outFilename);
+    auto created_file_size = file_size(p.c_str());
     receivedFileSizeValue->setText(humanFileSize(created_file_size, true, 2));
     auto ratio = ceil(created_file_size * 100.0 / source_file_size);
     compressionRatioTextValue->setText(QString::number(ratio) + " %");
@@ -664,6 +667,7 @@ void MainWindow::openFileDialog() {
 
     auto filename = dialog.getOpenFileName();
     QFileInfo fi(filename);
+    selectedFullFilename = filename.toStdString();
     filename = fi.fileName();
     selectedFileName->setText(filename.isEmpty() ? "Not Selected" : filename);
     auto ext = fi.completeSuffix();
@@ -678,11 +682,11 @@ void MainWindow::connectMethodDependMode() {
                 [this]() {
                     auto start = std::chrono::high_resolution_clock::now();
 
-                    FILE *input = fopen(selectedFileName->text().toStdString().c_str(), "rb");
+                    FILE *input = fopen(selectedFullFilename.c_str(), "rb");
                     if (input == nullptr)
                         throw std::runtime_error("Error open source file.\n");
 
-                    encode(input, selectedFileName->text().toStdString());
+                    encode(input, selectedFullFilename);
                     fclose(input);
 
                     auto end = std::chrono::high_resolution_clock::now();
@@ -693,11 +697,11 @@ void MainWindow::connectMethodDependMode() {
                 [this]() {
                     auto start = std::chrono::high_resolution_clock::now();
 
-                    BIT_FILE *input = open_input_bit_file(selectedFileName->text().toStdString().c_str());
+                    BIT_FILE *input = open_input_bit_file(selectedFullFilename.c_str());
                     if (input == nullptr)
                         throw std::runtime_error("Error open source file.\n");
 
-                    decode(input, selectedFileName->text().toStdString());
+                    decode(input, selectedFullFilename);
                     close_input_bit_file(input);
 
                     auto end = std::chrono::high_resolution_clock::now();
