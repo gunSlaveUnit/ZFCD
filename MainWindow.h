@@ -56,6 +56,7 @@ private:
     QGridLayout *centralLayout;
     QLabel *fileLabel;
     QLabel *selectedFileName;
+    std::string selectedFullFilename;
     QPushButton *selectFileButton;
     QPushButton *startButton;
     QPushButton *closeButton;
